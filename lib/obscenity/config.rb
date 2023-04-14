@@ -7,8 +7,12 @@ module Obscenity
     DEFAULT_BLACKLIST = File.dirname(__FILE__) + "/../../config/blacklist.yml"
     
     def initialize
+      @init = true
       yield(self) if block_given?
+      @init = false
+
       validate_config_options
+      update_base_lists
     end
     
     def replacement
@@ -21,6 +25,12 @@ module Obscenity
     
     def blacklist=(value)
       @blacklist = value == :default ? DEFAULT_BLACKLIST : value
+
+      if @init
+        @update_blacklist = true
+      else
+        Base.blacklist = set_list_content(@blacklist)
+      end
     end
     
     def whitelist
@@ -29,6 +39,12 @@ module Obscenity
     
     def whitelist=(value)
       @whitelist = value == :default ? DEFAULT_WHITELIST : value
+
+      if @init
+        @update_whitelist = true
+      else
+        Base.whitelist = set_list_content(@whitelist)
+      end
     end
     
     private
@@ -47,5 +63,17 @@ module Obscenity
       end
     end
     
+    def update_base_lists
+      Base.blacklist = set_list_content(@blacklist) if @update_blacklist
+      Base.whitelist = set_list_content(@whitelist) if @update_whitelist
+    end
+
+    def set_list_content(list)
+      case list
+      when Array then list
+      when String, Pathname then YAML.load_file( list.to_s )
+      else []
+      end
+    end
   end
 end
